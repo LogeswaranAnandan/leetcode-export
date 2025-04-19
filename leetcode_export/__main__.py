@@ -23,8 +23,19 @@ def parse_args():
         ),
     )
 
+    
+    parser.add_argument(
+        "title_slug",
+        type=str,
+        help="Specify the problem title slug to download its content"
+    )
+
     parser.add_argument("--cookies", type=str, help="set LeetCode cookies")
-    parser.add_argument("--folder", type=str, default=".", help="set output folder")
+    parser.add_argument(
+        "--folder",
+        type=str,
+        help="set output folder"
+    )
     parser.add_argument(
         "--problem-folder-name",
         type=str,
@@ -154,18 +165,27 @@ def main():
 
     if not cookies:
         cookies = input("Insert LeetCode cookies: ")
-
+    
     if not leetcode.set_cookies(cookies):
         logging.error(
             "Cookies not valid. Copy them from the Network tab of your browser by clicking on any leetcode.com request and going in Request Headers > cookie. Check README.md file for more information"
         )
         exit(1)
 
+    
+    title_slug = args.title_slug
+    if not title_slug:
+        title_slug = input("Insert LeetCode problem title slug: ")
+
+    folder = args.folder
+    if not folder:
+        folder = "F:/lokesh-work/git/leetcode-dsa/auto-generated"
+
     # Create output folder if it doesn't already exist
-    if not os.path.exists(args.folder):
+    if not os.path.exists(folder):
         logging.info("Output folder not found, creating it")
-        os.mkdir(args.folder)
-    os.chdir(args.folder)
+        os.mkdir(folder)
+    os.chdir(folder)
 
     title_slug_to_problem_folder_name: dict[str, str] = dict()
     title_slug_to_exported_languages: dict[str, set[str]] = dict()
@@ -175,83 +195,132 @@ def main():
     print("Exporting LeetCode submissions...")
 
     for submission in leetcode.get_submissions():
-        if (
-            last_submission_timestamp is not None
-            and submission.timestamp > last_submission_timestamp
-        ):
-            logging.warning(
-                "Submissions are not in reverse chronological order, --only-last-submission flag might not work as expected if used. Please report this issue on GitHub attaching the debug.log file: https://github.com/NeverMendel/leetcode-export/issues"
-            )
-        last_submission_timestamp = submission.timestamp
-
-        if args.only_accepted and submission.status_display != "Accepted":
-            logging.info(
-                f"Skipping {submission.title_slug} {submission.date_formatted} because its status is '{submission.status_display}'"
-            )
-            continue
-
-        if args.language and submission.lang not in args.language:
-            logging.info(
-                f"Skipping {submission.title_slug} {submission.date_formatted} because its programming language is {submission.lang}"
-            )
-            continue
-
-        if submission.title_slug not in title_slug_to_exported_languages:
-            title_slug_to_exported_languages[submission.title_slug] = set()
-
-        if (
-            args.only_last_submission
-            and submission.title_slug in title_slug_to_exported_languages
-            and submission.lang
-            in title_slug_to_exported_languages[submission.title_slug]
-        ):
-            logging.info(
-                f"Skipping {submission.title_slug} {submission.date_formatted} in {submission.lang} because a more recent submission has already been exported"
-            )
-            continue
-        title_slug_to_exported_languages[submission.title_slug].add(submission.lang)
-
-        if submission.title_slug not in title_slug_to_problem_folder_name:
-            problem_statement = leetcode.get_problem_statement(submission.title_slug)
-            problem_folder_name = problem_folder_name_template.substitute(
-                **problem_statement.__dict__
-            )
-            title_slug_to_problem_folder_name[submission.title_slug] = (
-                problem_folder_name
-            )
-            if not os.path.exists(problem_folder_name):
-                os.mkdir(problem_folder_name)
-            os.chdir(problem_folder_name)
-
-            problem_statement_filename = problem_statement_filename_template.substitute(
-                **problem_statement.__dict__
-            )
-            if not args.no_problem_statement and not os.path.exists(
-                problem_statement_filename
-            ):
-                with open(problem_statement_filename, "w+") as problem_statement_file:
-                    problem_statement_file.write(
-                        problem_statement_template.substitute(
-                            **problem_statement.__dict__
-                        )
+        ##### LOGES: Custom logic Starts
+        if title_slug: 
+            if submission.title_slug != title_slug:
+                continue
+            else:
+                if submission.title_slug not in title_slug_to_problem_folder_name:
+                    problem_statement = leetcode.get_problem_statement(submission.title_slug)
+                    problem_folder_name = problem_folder_name_template.substitute(
+                        **problem_statement.__dict__
                     )
-        else:
-            os.chdir(title_slug_to_problem_folder_name[submission.title_slug])
+                    title_slug_to_problem_folder_name[submission.title_slug] = (
+                        problem_folder_name
+                    )
+                    if not os.path.exists(problem_folder_name):
+                        os.mkdir(problem_folder_name)
+                    os.chdir(problem_folder_name)
 
-        submission_filename = submission_filename_template.substitute(
-            **submission.__dict__
-        )
-        if not os.path.exists(submission_filename):
-            logging.info(f"Writing {submission.title_slug}/{submission_filename}")
-            sub_file = open(submission_filename, "w+")
-            sub_file.write(submission.code)
-            sub_file.close()
-        else:
-            logging.info(
-                f"{submission.title_slug}/{submission_filename} already exists, skipping it"
-            )
+                    problem_statement_filename = problem_statement_filename_template.substitute(
+                        **problem_statement.__dict__
+                    )
+                    if not args.no_problem_statement and not os.path.exists(
+                        problem_statement_filename
+                    ):
+                        with open(problem_statement_filename, "w+") as problem_statement_file:
+                            problem_statement_file.write(
+                                problem_statement_template.substitute(
+                                    **problem_statement.__dict__
+                                )
+                            )
+                else:
+                    os.chdir(title_slug_to_problem_folder_name[submission.title_slug])
 
-        os.chdir("..")
+                # submission_filename = submission_filename_template.substitute(
+                #     **submission.__dict__
+                # )
+                submission_filename = "Solution.java"
+                if not os.path.exists(submission_filename):
+                    logging.info(f"Writing {submission.title_slug}/{submission_filename}")
+                    sub_file = open(submission_filename, "w+")
+                    sub_file.write(submission.code)
+                    sub_file.close()
+                else:
+                    logging.info(
+                        f"{submission.title_slug}/{submission_filename} already exists, skipping it"
+                    )
+                break
+        ##### LOGES: Custom Logic Ends
+
+
+        # if (
+        #     last_submission_timestamp is not None
+        #     and submission.timestamp > last_submission_timestamp
+        # ):
+        #     logging.warning(
+        #         "Submissions are not in reverse chronological order, --only-last-submission flag might not work as expected if used. Please report this issue on GitHub attaching the debug.log file: https://github.com/NeverMendel/leetcode-export/issues"
+        #     )
+        # last_submission_timestamp = submission.timestamp
+
+        # if args.only_accepted and submission.status_display != "Accepted":
+        #     logging.info(
+        #         f"Skipping {submission.title_slug} {submission.date_formatted} because its status is '{submission.status_display}'"
+        #     )
+        #     continue
+
+        # if args.language and submission.lang not in args.language:
+        #     logging.info(
+        #         f"Skipping {submission.title_slug} {submission.date_formatted} because its programming language is {submission.lang}"
+        #     )
+        #     continue
+
+        # if submission.title_slug not in title_slug_to_exported_languages:
+        #     title_slug_to_exported_languages[submission.title_slug] = set()
+
+        # if (
+        #     args.only_last_submission
+        #     and submission.title_slug in title_slug_to_exported_languages
+        #     and submission.lang
+        #     in title_slug_to_exported_languages[submission.title_slug]
+        # ):
+        #     logging.info(
+        #         f"Skipping {submission.title_slug} {submission.date_formatted} in {submission.lang} because a more recent submission has already been exported"
+        #     )
+        #     continue
+        # title_slug_to_exported_languages[submission.title_slug].add(submission.lang)
+
+        # if submission.title_slug not in title_slug_to_problem_folder_name:
+        #     problem_statement = leetcode.get_problem_statement(submission.title_slug)
+        #     problem_folder_name = problem_folder_name_template.substitute(
+        #         **problem_statement.__dict__
+        #     )
+        #     title_slug_to_problem_folder_name[submission.title_slug] = (
+        #         problem_folder_name
+        #     )
+        #     if not os.path.exists(problem_folder_name):
+        #         os.mkdir(problem_folder_name)
+        #     os.chdir(problem_folder_name)
+
+        #     problem_statement_filename = problem_statement_filename_template.substitute(
+        #         **problem_statement.__dict__
+        #     )
+        #     if not args.no_problem_statement and not os.path.exists(
+        #         problem_statement_filename
+        #     ):
+        #         with open(problem_statement_filename, "w+") as problem_statement_file:
+        #             problem_statement_file.write(
+        #                 problem_statement_template.substitute(
+        #                     **problem_statement.__dict__
+        #                 )
+        #             )
+        # else:
+        #     os.chdir(title_slug_to_problem_folder_name[submission.title_slug])
+
+        # submission_filename = submission_filename_template.substitute(
+        #     **submission.__dict__
+        # )
+        # if not os.path.exists(submission_filename):
+        #     logging.info(f"Writing {submission.title_slug}/{submission_filename}")
+        #     sub_file = open(submission_filename, "w+")
+        #     sub_file.write(submission.code)
+        #     sub_file.close()
+        # else:
+        #     logging.info(
+        #         f"{submission.title_slug}/{submission_filename} already exists, skipping it"
+        #     )
+
+        # os.chdir("..")
 
 
 if __name__ == "__main__":

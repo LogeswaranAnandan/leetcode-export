@@ -6,7 +6,7 @@ with open("README.md", "r", encoding="UTF-8") as f:
     long_description = f.read()
 
 setup(
-    name="leetcode-export",
+    name="lc-get",
     version=__version__,
     url="https://github.com/NeverMendel/leetcode-export",
     license="MIT",
@@ -27,7 +27,7 @@ setup(
     python_requires=">=3.7",
     entry_points={
         "console_scripts": [
-            "leetcode-export=leetcode_export.__main__:main",
+            "lc-get=leetcode_export.__main__:main",
         ]
     },
 )
